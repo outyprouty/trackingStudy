@@ -3,19 +3,14 @@ import warnings
 from matplotlib import pyplot as plt
 from astropy.io import fits
 from astropy.wcs import WCS, FITSFixedWarning
-from astropy.utils.data import get_pkg_data_filename
 from datetime import datetime
+from tabulate import tabulate
 
 from astropy.stats import sigma_clipped_stats
 
 from photutils.detection import DAOStarFinder
-from photutils.aperture import CircularAperture
 import numpy as np
 
-from sys import argv, exit
-
-firstNum = int(argv[1])
-lastNum = int(argv[2])
 
 fitsFileNames = []
 wcsFileNames = []
@@ -129,48 +124,60 @@ for n in range(numFiles):
     plt.close()
 
 
-
-#'2023-01-25T01:10:21.2185211'
-#Removed microseconds due to strptime not having microsecond support for more than 7 digits
-lastDateStr = fits.open("./data/"+fitsFileNames[lastNum])[0].header["DATE-OBS"].split('.')[0]
-firstDateStr = fits.open("./data/"+fitsFileNames[firstNum])[0].header["DATE-OBS"].split('.')[0]
-lastDate = datetime.strptime(lastDateStr, "%Y-%m-%dT%H:%M:%S")
-firstDate = datetime.strptime(firstDateStr, "%Y-%m-%dT%H:%M:%S")
-
-totSec = (lastDate-firstDate).total_seconds()
-
-
-print()
-print("Begin Tracking Analysis")
-print("  Below are the differences between Capture {:d} and Capture {:d}".format(lastNum, firstNum))
-print("  Capture {:d}   {}".format(lastNum, lastDate))
-print("  Capture {:d}   {}".format(firstNum, firstDate))
-print("  The total time between the two dates is: {:f}s".format(totSec))
-print()
-
-RAs = np.array(RAs)
-DECs = np.array(DECs)
-X = np.array(X)
-Y = np.array(Y)
-
-diffR = ((RAs[2]-RAs[0])/totSec)*3600.
-
-diffD = ((DECs[2]-DECs[0])/totSec)*3600
-
-diffX = (X[2]-X[0])/totSec
-
-diffY = (Y[2]-Y[0])/totSec
-
-
-from tabulate import tabulate
-table = np.array([range(10), diffR, diffD, diffX, diffY]).T
-print(tabulate(table, headers=["Source ID", "dRA[''/s]", "dDEC[''/s]", "dX[p/s]", "dY[p/s]"],floatfmt=('.0f', '.6f', '.6f', '.6f', '.6f')))
-print()
-print(tabulate([["Average",np.average(diffR), np.average(diffD), np.average(diffX), np.average(diffY)]], headers=["         ", "dRA[''/s]", "dDEC[''/s]", "dX[p/s]", "dY[p/s]"], floatfmt=(None, '.6f', '.6f', '.6f', '.6f')))
-
-print()
+#print pixel scale for reference
 pixScale = float(wcs.proj_plane_pixel_scales()[0].to_value(unit='deg')*3600)
+print()
 print("Calculated Pixel Size: {:0.4f} [''/pix]".format(pixScale))
+print()
 
-#How to incorperate FWHM error aka seeing error?
-#How to reconcile different measures of pixel dimensions?
+print("Begin Tracking Analysis")
+print()
+
+
+#Generate list of pairs
+idxs = range(numFiles)
+pairs = [(i, j) for idx, i in enumerate(idxs) for j in idxs[idx + 1:]]
+
+for p in pairs:
+    firstNum, lastNum = p
+
+    #'2023-01-25T01:10:21.2185211'
+    #Removed microseconds due to strptime not having microsecond support for more than 7 digits
+    lastDateStr = fits.open("./data/"+fitsFileNames[lastNum])[0].header["DATE-OBS"].split('.')[0]
+    firstDateStr = fits.open("./data/"+fitsFileNames[firstNum])[0].header["DATE-OBS"].split('.')[0]
+    lastDate = datetime.strptime(lastDateStr, "%Y-%m-%dT%H:%M:%S")
+    firstDate = datetime.strptime(firstDateStr, "%Y-%m-%dT%H:%M:%S")
+
+    totSec = (lastDate-firstDate).total_seconds()
+
+
+    print()
+    print("  Below are the differences between Capture {:d} and Capture {:d}".format(lastNum, firstNum))
+    print("  Capture {:d}   {}".format(lastNum, lastDate))
+    print("  Capture {:d}   {}".format(firstNum, firstDate))
+    print("  The total time between the two dates is: {:f}s".format(totSec))
+    print()
+
+    RAs = np.array(RAs)
+    DECs = np.array(DECs)
+    X = np.array(X)
+    Y = np.array(Y)
+
+    diffR = ((RAs[lastNum]-RAs[firstNum])/totSec)*3600.
+
+    diffD = ((DECs[lastNum]-DECs[firstNum])/totSec)*3600
+
+    diffX = (X[lastNum]-X[firstNum])/totSec
+
+    diffY = (Y[lastNum]-Y[firstNum])/totSec
+
+
+    table = np.array([range(10), diffR, diffD, diffX, diffY]).T
+    print(tabulate(table, headers=["Source ID", "dRA[''/s]", "dDEC[''/s]", "dX[p/s]", "dY[p/s]"],floatfmt=('.0f', '.6f', '.6f', '.6f', '.6f')))
+    print()
+    print(tabulate([["Average",np.average(diffR), np.average(diffD), np.average(diffX), np.average(diffY)]], headers=["         ", "dRA[''/s]", "dDEC[''/s]", "dX[p/s]", "dY[p/s]"], floatfmt=(None, '.6f', '.6f', '.6f', '.6f')))
+
+    print()
+
+    #How to incorperate FWHM error aka seeing error?
+    #How to reconcile different measures of pixel dimensions?
