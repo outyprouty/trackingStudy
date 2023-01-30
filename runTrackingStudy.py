@@ -14,10 +14,8 @@ import numpy as np
 
 from sys import argv, exit
 
-#Simple title from CLI
-title = argv[1]
-firstNum = int(argv[2])
-lastNum = int(argv[3])
+firstNum = int(argv[1])
+lastNum = int(argv[2])
 
 fitsFileNames = []
 wcsFileNames = []
@@ -33,7 +31,7 @@ for pair_num in range(numFiles):
 
 WCS_IDX = int(opts[numFiles+1][0])
 WCS_FILENAME = wcsFileNames[WCS_IDX]
-
+title = " ".join(opts[numFiles+2])
 
 ##end dissection of config file
 
@@ -117,8 +115,6 @@ for n in range(numFiles):
         ax.scatter(x,y, s=50, c='red', marker='x')
         ax.text(x+10,y+10, "%d"%i)
         coords = wcs.pixel_to_world(x,y)
-    #	print("Obj {:d}   {:02.8f}     {:02.8f}".format(i, coords.ra.deg, coords.dec.deg))
-    #	print()
         tmpX.append(x)
         tmpY.append(y)
         tmpRA.append(coords.ra.deg)
@@ -145,7 +141,7 @@ totSec = (lastDate-firstDate).total_seconds()
 
 
 print()
-print("Begin Analysis")
+print("Begin Tracking Analysis")
 print("  Below are the differences between Capture {:d} and Capture {:d}".format(lastNum, firstNum))
 print("  Capture {:d}   {}".format(lastNum, lastDate))
 print("  Capture {:d}   {}".format(firstNum, firstDate))
