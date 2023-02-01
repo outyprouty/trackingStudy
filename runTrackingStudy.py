@@ -59,6 +59,7 @@ with warnings.catch_warnings():
 #Setup empty arrs to capture all angular and pixel locations found 
 RAs,DECs = [], []
 X,Y = [],[]
+FWHMs = []
 
 #Cycle through each FITS file, grab the image data, find the stars, log their locations, and make some plots
 for n in range(numFiles):
@@ -91,6 +92,8 @@ for n in range(numFiles):
 
     ## Extract just the positions
     positions = np.transpose((sources['xcentroid'], sources['ycentroid']))
+    if finder == "IRAF":
+        FWHMs.append(sources['fwhm'])
 
     ## Plot image in WCS Frame
     fig = plt.figure(figsize=(16,10))
@@ -187,6 +190,7 @@ for p in pairs:
     DECs = np.array(DECs)
     X = np.array(X)
     Y = np.array(Y)
+    FWHMs = np.array(FWHMs)
 
     diffR = ((RAs[lastNum]-RAs[firstNum])/totSec)*3600.
 
@@ -195,13 +199,18 @@ for p in pairs:
     diffX = (X[lastNum]-X[firstNum])/totSec
 
     diffY = (Y[lastNum]-Y[firstNum])/totSec
+    
 
-    table = np.array([range(len(RAs[0])), diffR, diffD, diffX, diffY]).T
-    print(tabulate(table, headers=["Source ID", "dRA[''/s]", "dDEC[''/s]", "dX[p/s]", "dY[p/s]"],floatfmt=('.0f', '.6f', '.6f', '.6f', '.6f')))
+    if finder == "IRAF":
+        avgFWHM = 0.5*(FWHMs[firstNum]+FWHMs[lastNum])
+        table = np.array([range(len(RAs[0])), diffR, diffD, diffX, diffY, avgFWHM, avgFWHM*pixScale]).T
+        print(tabulate(table, headers=["Source ID", "dRA[''/s]", "dDEC[''/s]", "dX[p/s]", "dY[p/s]", "FWHM[p]", "FWHM['']"],floatfmt=('.0f', '.6f', '.6f', '.6f', '.6f', '.6f', '.6f')))
+        print()
+        print(tabulate([["Average",np.average(diffR), np.average(diffD), np.average(diffX), np.average(diffY), np.average(avgFWHM), np.average(avgFWHM)*pixScale]], headers=["         ", "dRA[''/s]", "dDEC[''/s]", "dX[p/s]", "dY[p/s]", "FWHM[p]", "FWHM['']"], floatfmt=(None, '.6f', '.6f', '.6f', '.6f', '.6f', '.6f')))
+    else:
+        table = np.array([range(len(RAs[0])), diffR, diffD, diffX, diffY]).T
+        print(tabulate(table, headers=["Source ID", "dRA[''/s]", "dDEC[''/s]", "dX[p/s]", "dY[p/s]"],floatfmt=('.0f', '.6f', '.6f', '.6f', '.6f')))
+        print()
+        print(tabulate([["Average",np.average(diffR), np.average(diffD), np.average(diffX), np.average(diffY)]], headers=["         ", "dRA[''/s]", "dDEC[''/s]", "dX[p/s]", "dY[p/s]"], floatfmt=(None, '.6f', '.6f', '.6f', '.6f')))
+
     print()
-    print(tabulate([["Average",np.average(diffR), np.average(diffD), np.average(diffX), np.average(diffY)]], headers=["         ", "dRA[''/s]", "dDEC[''/s]", "dX[p/s]", "dY[p/s]"], floatfmt=(None, '.6f', '.6f', '.6f', '.6f')))
-
-    print()
-
-    #How to incorperate FWHM error aka seeing error?
-    #How to reconcile different measures of pixel dimensions?
